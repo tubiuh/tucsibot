@@ -1,6 +1,9 @@
 import logging
 import asyncio
 import os
+import threading
+from flask import Flask
+# Asegúrate de que 'import os' también esté ahí, lo necesitamos.
 from telegram import Update, Bot
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode
@@ -160,5 +163,27 @@ def main():
     logger.info("Bot iniciado y escuchando...")
     application.run_polling()
 
+# --- Bloque de inicio (NUEVA VERSIÓN con servidor web) ---
 if __name__ == '__main__':
+    # --- Configuración del servidor web falso ---
+    # Crea una aplicación web simple con Flask
+    flask_app = Flask(__name__)
+
+    @flask_app.route('/')
+    def health_check():
+        # Esta es la página que Render visitará para ver si estamos vivos
+        return "OK, bot is running."
+
+    def run_flask():
+        # Render nos da el puerto a través de una variable de entorno PORT
+        # Si no existe, usamos 5000 por defecto para pruebas locales
+        port = int(os.environ.get('PORT', 5000))
+        flask_app.run(host='0.0.0.0', port=port)
+    # -----------------------------------------
+
+    # Inicia el servidor web en un hilo (thread) separado para que no bloquee al bot
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
+    # Inicia la función principal de nuestro bot (la que ya teníamos)
     main()
